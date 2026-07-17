@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — MyShop</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #111; }
+    nav { background: #1a1a2e; color: #fff; padding: 14px 32px; display: flex; justify-content: space-between; align-items: center; }
+    nav .logo { font-size: 1.3rem; font-weight: 700; }
+    nav .links a { color: #ccc; text-decoration: none; margin-left: 24px; font-size: .9rem; }
+    nav .links a:hover { color: #fff; }
+
+    .section { max-width: 1000px; margin: 36px auto; padding: 0 20px; }
+    .section h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 20px; }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 16px; margin-bottom: 36px; }
+    .stat-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,.07); }
+    .stat-card .label { font-size: .8rem; color: #777; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+    .stat-card .value { font-size: 2rem; font-weight: 800; margin-top: 6px; color: #1a1a2e; }
+
+    /* Add product form */
+    .card { background: #fff; border-radius: 12px; padding: 28px; box-shadow: 0 2px 12px rgba(0,0,0,.07); margin-bottom: 32px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .field { margin-bottom: 0; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 6px; color: #444; }
+    .field input, .field textarea { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; font-size: .95rem; outline: none; font-family: inherit; }
+    .field input:focus, .field textarea:focus { border-color: #1a1a2e; }
+    .field textarea { resize: vertical; min-height: 70px; }
+    .btn { background: #1a1a2e; color: #fff; border: none; padding: 11px 22px; border-radius: 8px; cursor: pointer; font-size: .9rem; font-weight: 600; margin-top: 16px; transition: background .2s; }
+    .btn:hover { background: #16213e; }
+    .btn.danger { background: #dc2626; margin-top: 0; padding: 6px 12px; font-size: .8rem; }
+    .btn.danger:hover { background: #b91c1c; }
+
+    /* Products table */
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #1a1a2e; color: #fff; text-align: left; padding: 12px 14px; font-size: .83rem; }
+    td { padding: 12px 14px; font-size: .87rem; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    td img { width: 52px; height: 52px; object-fit: cover; border-radius: 6px; }
+
+    .toast { position:fixed; bottom:28px; right:28px; background:#111; color:#fff; padding:14px 22px; border-radius:10px; font-size:.9rem; opacity:0; transform:translateY(12px); transition:all .3s; pointer-events:none; z-index:999; }
+    .toast.show { opacity:1; transform:translateY(0); }
+    .toast.error { background:#dc2626; }
+    .toast.ok { background:#16a34a; }
+
+    footer { text-align:center; padding:32px; color:#999; font-size:.82rem; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">🛒 MyShop — Admin</span>
+  <span class="links">
+    <a href="/">Products</a>
+    <a href="/orders">Orders</a>
+    <a href="/admin">Admin</a>
+  </span>
+</nav>
+
+<!-- Stats -->
+<div class="section">
+  <h2>Dashboard</h2>
+  <div class="stats" id="stats">
+    <div class="stat-card"><div class="label">Total Revenue</div><div class="value" id="sRev">…</div></div>
+    <div class="stat-card"><div class="label">Paid Orders</div><div class="value" id="sPaid">…</div></div>
+    <div class="stat-card"><div class="label">Total Orders</div><div class="value" id="sTot">…</div></div>
+    <div class="stat-card"><div class="label">Products</div><div class="value" id="sProd">…</div></div>
+  </div>
+
+  <!-- Add product -->
+  <div class="card">
+    <h2 style="margin-bottom:20px">Add New Product</h2>
+    <div class="form-grid">
+      <div class="field">
+        <label>Product Name *</label>
+        <input id="pName" type="text" placeholder="Wireless Headphones" />
+      </div>
+      <div class="field">
+        <label>Price (₹) *</label>
+        <input id="pPrice" type="number" min="1" placeholder="2999" />
+      </div>
+      <div class="field full">
+        <label>Description</label>
+        <textarea id="pDesc" placeholder="Short product description…"></textarea>
+      </div>
+      <div class="field full">
+        <label>Image URL</label>
+        <input id="pImage" type="url" placeholder="https://…" />
+      </div>
+    </div>
+    <button class="btn" onclick="addProduct()">Add Product</button>
+  </div>
+
+  <!-- Products list -->
+  <h2 style="margin-bottom:16px">All Products</h2>
+  <div class="card" style="padding:0;overflow:hidden">
+    <table>
+      <thead>
+        <tr><th>Image</th><th>Name</th><th>Description</th><th>Price</th><th>Action</th></tr>
+      </thead>
+      <tbody id="prodTable"><tr><td colspan="5">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<footer>© 2025 MyShop Admin</footer>
+
+<script>
+function fmt(paise) { return '₹' + (paise/100).toLocaleString('en-IN'); }
+function showToast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  setTimeout(() => t.className='toast', 3500);
+}
+
+async function loadStats() {
+  const r = await fetch('/api/dashboard/summary');
+  const d = await r.json();
+  document.getElementById('sRev').textContent  = fmt(d.total_revenue_paise || 0);
+  document.getElementById('sPaid').textContent = d.paid_orders || 0;
+  document.getElementById('sTot').textContent  = d.total_orders || 0;
+  document.getElementById('sProd').textContent = d.total_products || 0;
+}
+
+async function loadProducts() {
+  const r = await fetch('/api/products');
+  const ps = await r.json();
+  const tb = document.getElementById('prodTable');
+  if (!ps.length) { tb.innerHTML='<tr><td colspan="5" style="color:#999;text-align:center;padding:24px">No products yet</td></tr>'; return; }
+  tb.innerHTML = ps.map(p => `
+    <tr>
+      <td><img src="${p.image_url || 'https://placehold.co/52?text=—'}" onerror="this.src='https://placehold.co/52?text=—'" /></td>
+      <td style="font-weight:600">${p.name}</td>
+      <td style="color:#666;font-size:.83rem">${p.description||'—'}</td>
+      <td style="font-weight:700">${fmt(p.price)}</td>
+      <td><button class="btn danger" onclick="deleteProduct(${p.id})">Delete</button></td>
+    </tr>
+  `).join('');
+}
+
+async function addProduct() {
+  const name  = document.getElementById('pName').value.trim();
+  const price = parseFloat(document.getElementById('pPrice').value);
+  const desc  = document.getElementById('pDesc').value.trim();
+  const img   = document.getElementById('pImage').value.trim();
+
+  if (!name || !price) { showToast('Name and Price are required', 'error'); return; }
+
+  const res = await fetch('/api/products', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ name, price: Math.round(price*100), description:desc, image_url:img }),
+  });
+  if (res.ok) {
+    showToast('Product added!', 'ok');
+    ['pName','pPrice','pDesc','pImage'].forEach(id => document.getElementById(id).value='');
+    loadProducts(); loadStats();
+  } else {
+    showToast('Error adding product', 'error');
+  }
+}
+
+async function deleteProduct(id) {
+  if (!confirm('Delete this product?')) return;
+  await fetch(`/api/products/${id}`, { method:'DELETE' });
+  showToast('Product deleted', 'ok');
+  loadProducts(); loadStats();
+}
+
+loadStats(); loadProducts();
+</script>
+</body>
+</html>
