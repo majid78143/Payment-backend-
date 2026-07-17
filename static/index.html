@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shop — Razorpay</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #111; }
+
+    /* NAV */
+    nav { background: #1a1a2e; color: #fff; padding: 14px 32px; display: flex; justify-content: space-between; align-items: center; }
+    nav .logo { font-size: 1.3rem; font-weight: 700; letter-spacing: -.5px; }
+    nav .links a { color: #ccc; text-decoration: none; margin-left: 24px; font-size: .9rem; }
+    nav .links a:hover { color: #fff; }
+
+    /* HERO */
+    .hero { background: linear-gradient(135deg,#1a1a2e,#16213e); color:#fff; text-align:center; padding:60px 20px; }
+    .hero h1 { font-size:2.4rem; font-weight:800; }
+    .hero p  { margin-top:12px; opacity:.7; font-size:1.05rem; }
+
+    /* GRID */
+    .section { max-width:1100px; margin:40px auto; padding:0 20px; }
+    .section h2 { font-size:1.4rem; font-weight:700; margin-bottom:24px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:24px; }
+
+    /* CARD */
+    .card { background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,.08); transition:transform .2s,box-shadow .2s; }
+    .card:hover { transform:translateY(-4px); box-shadow:0 8px 24px rgba(0,0,0,.12); }
+    .card img { width:100%; height:200px; object-fit:cover; }
+    .card-body { padding:16px; }
+    .card-body h3 { font-size:1rem; font-weight:600; }
+    .card-body p  { font-size:.85rem; color:#666; margin-top:6px; min-height:36px; }
+    .card-footer { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-top:1px solid #f0f0f0; }
+    .price { font-size:1.15rem; font-weight:700; color:#1a1a2e; }
+    .btn { background:#1a1a2e; color:#fff; border:none; padding:9px 18px; border-radius:8px; cursor:pointer; font-size:.88rem; font-weight:600; transition:background .2s; }
+    .btn:hover { background:#16213e; }
+    .btn.success { background:#16a34a; }
+    .btn:disabled { background:#999; cursor:not-allowed; }
+
+    /* MODAL */
+    .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100; align-items:center; justify-content:center; }
+    .overlay.open { display:flex; }
+    .modal { background:#fff; border-radius:16px; padding:32px; width:100%; max-width:420px; }
+    .modal h2 { font-size:1.2rem; font-weight:700; margin-bottom:20px; }
+    .field { margin-bottom:16px; }
+    .field label { display:block; font-size:.85rem; font-weight:600; margin-bottom:6px; color:#444; }
+    .field input { width:100%; border:1px solid #ddd; border-radius:8px; padding:10px 12px; font-size:.95rem; outline:none; }
+    .field input:focus { border-color:#1a1a2e; }
+    .modal-actions { display:flex; gap:12px; margin-top:24px; }
+    .btn-outline { background:#fff; color:#1a1a2e; border:1.5px solid #1a1a2e; padding:9px 18px; border-radius:8px; cursor:pointer; font-size:.88rem; font-weight:600; }
+
+    /* TOAST */
+    .toast { position:fixed; bottom:28px; right:28px; background:#111; color:#fff; padding:14px 22px; border-radius:10px; font-size:.9rem; opacity:0; transform:translateY(12px); transition:all .3s; pointer-events:none; z-index:999; }
+    .toast.show { opacity:1; transform:translateY(0); }
+    .toast.error { background:#dc2626; }
+    .toast.ok { background:#16a34a; }
+
+    footer { text-align:center; padding:32px; color:#999; font-size:.82rem; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">🛒 MyShop</span>
+  <span class="links">
+    <a href="/">Products</a>
+    <a href="/orders">My Orders</a>
+    <a href="/admin">Admin</a>
+  </span>
+</nav>
+
+<div class="hero">
+  <h1>Quality Products, Easy Payments</h1>
+  <p>Pay securely with Razorpay — UPI, Cards, Net Banking &amp; more</p>
+</div>
+
+<div class="section">
+  <h2>All Products</h2>
+  <div class="grid" id="productGrid">
+    <p id="loading">Loading products…</p>
+  </div>
+</div>
+
+<!-- Checkout Modal -->
+<div class="overlay" id="checkoutOverlay">
+  <div class="modal">
+    <h2 id="modalProductName">Buy Product</h2>
+    <div class="field">
+      <label>Your Name</label>
+      <input id="custName" type="text" placeholder="Rahul Sharma" />
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input id="custEmail" type="email" placeholder="rahul@example.com" />
+    </div>
+    <div class="field">
+      <label>Phone</label>
+      <input id="custPhone" type="tel" placeholder="9876543210" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn" id="payBtn" onclick="startPayment()">Pay ₹<span id="modalPrice"></span></button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer>© 2025 MyShop · Powered by Razorpay</footer>
+
+<script>
+let currentProduct = null;
+
+function paise2rupees(p) {
+  return (p / 100).toLocaleString('en-IN', { minimumFractionDigits: 0 });
+}
+
+function showToast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3500);
+}
+
+async function loadProducts() {
+  try {
+    const res = await fetch('/api/products');
+    const products = await res.json();
+    const grid = document.getElementById('productGrid');
+    if (!products.length) { grid.innerHTML = '<p>No products yet. Add from Admin page.</p>'; return; }
+    grid.innerHTML = products.map(p => `
+      <div class="card">
+        <img src="${p.image_url || 'https://placehold.co/400x200?text=No+Image'}" alt="${p.name}" onerror="this.src='https://placehold.co/400x200?text=No+Image'" />
+        <div class="card-body">
+          <h3>${p.name}</h3>
+          <p>${p.description || ''}</p>
+        </div>
+        <div class="card-footer">
+          <span class="price">₹${paise2rupees(p.price)}</span>
+          <button class="btn" onclick='openCheckout(${JSON.stringify(p)})'>Buy Now</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('productGrid').innerHTML = '<p style="color:red">Could not load products.</p>';
+  }
+  document.getElementById('loading')?.remove();
+}
+
+function openCheckout(product) {
+  currentProduct = product;
+  document.getElementById('modalProductName').textContent = product.name;
+  document.getElementById('modalPrice').textContent = paise2rupees(product.price);
+  document.getElementById('checkoutOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('checkoutOverlay').classList.remove('open');
+  currentProduct = null;
+}
+
+async function startPayment() {
+  const name  = document.getElementById('custName').value.trim();
+  const email = document.getElementById('custEmail').value.trim();
+  const phone = document.getElementById('custPhone').value.trim();
+
+  if (!name || !email || !phone) {
+    showToast('Please fill all fields', 'error'); return;
+  }
+
+  const payBtn = document.getElementById('payBtn');
+  payBtn.disabled = true;
+  payBtn.textContent = 'Creating order…';
+
+  try {
+    // Step 1: Create Razorpay order on backend
+    const orderRes = await fetch('/api/payment/create-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount:          currentProduct.price,
+        product_id:      currentProduct.id,
+        customer_name:   name,
+        customer_email:  email,
+        customer_phone:  phone,
+      }),
+    });
+    const order = await orderRes.json();
+    if (!order.order_id) throw new Error('Order creation failed');
+
+    closeModal();
+
+    // Step 2: Open Razorpay Checkout
+    const options = {
+      key:         order.key,
+      amount:      order.amount,
+      currency:    order.currency,
+      name:        'MyShop',
+      description: currentProduct?.name || 'Purchase',
+      order_id:    order.order_id,
+      prefill: { name, email, contact: phone },
+      theme: { color: '#1a1a2e' },
+
+      // Step 3: On payment success → verify with backend
+      handler: async function(response) {
+        try {
+          const verifyRes = await fetch('/api/payment/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id:   response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature:  response.razorpay_signature,
+            }),
+          });
+          const result = await verifyRes.json();
+          if (result.success) {
+            showToast('✅ Payment Successful! Thank you.', 'ok');
+          } else {
+            showToast('⚠️ Payment received but verification failed. Contact support.', 'error');
+          }
+        } catch(e) {
+          showToast('Verification error. Please contact support.', 'error');
+        }
+      },
+
+      modal: { ondismiss: function() { showToast('Payment cancelled', 'error'); } }
+    };
+
+    new Razorpay(options).open();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    payBtn.disabled = false;
+    payBtn.textContent = 'Pay ₹' + (currentProduct ? paise2rupees(currentProduct.price) : '');
+  }
+}
+
+loadProducts();
+</script>
+</body>
+</html>

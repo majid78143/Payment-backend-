@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orders — MyShop</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #111; }
+    nav { background: #1a1a2e; color: #fff; padding: 14px 32px; display: flex; justify-content: space-between; align-items: center; }
+    nav .logo { font-size: 1.3rem; font-weight: 700; }
+    nav .links a { color: #ccc; text-decoration: none; margin-left: 24px; font-size: .9rem; }
+    nav .links a:hover { color: #fff; }
+
+    .section { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+    .section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 24px; }
+
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+    th { background: #1a1a2e; color: #fff; text-align: left; padding: 14px 16px; font-size: .85rem; font-weight: 600; }
+    td { padding: 14px 16px; font-size: .88rem; border-bottom: 1px solid #f0f0f0; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: .75rem; font-weight: 700; text-transform: uppercase; }
+    .badge.paid    { background: #dcfce7; color: #15803d; }
+    .badge.created { background: #fef9c3; color: #92400e; }
+    .badge.failed  { background: #fee2e2; color: #dc2626; }
+
+    .empty { text-align: center; padding: 60px 20px; color: #999; }
+    footer { text-align: center; padding: 32px; color: #999; font-size: .82rem; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">🛒 MyShop</span>
+  <span class="links">
+    <a href="/">Products</a>
+    <a href="/orders">My Orders</a>
+    <a href="/admin">Admin</a>
+  </span>
+</nav>
+
+<div class="section">
+  <h2>All Orders</h2>
+  <div id="ordersContainer"><p>Loading…</p></div>
+</div>
+
+<footer>© 2025 MyShop · Powered by Razorpay</footer>
+
+<script>
+function fmt(paise) { return '₹' + (paise/100).toLocaleString('en-IN'); }
+function fmtDate(d) { return d ? new Date(d).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—'; }
+
+async function load() {
+  const res = await fetch('/api/orders');
+  const orders = await res.json();
+  const c = document.getElementById('ordersContainer');
+
+  if (!orders.length) {
+    c.innerHTML = '<div class="empty"><p>No orders yet.</p></div>'; return;
+  }
+
+  c.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Product</th>
+          <th>Customer</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${orders.map(o => `
+          <tr>
+            <td style="font-family:monospace;font-size:.8rem">${o.id}</td>
+            <td>${o.product_name || '—'}</td>
+            <td>
+              <div>${o.customer_name || '—'}</div>
+              <div style="color:#888;font-size:.8rem">${o.customer_email || ''}</div>
+            </td>
+            <td style="font-weight:700">${fmt(o.amount)}</td>
+            <td><span class="badge ${o.status}">${o.status}</span></td>
+            <td style="color:#666">${fmtDate(o.created_at)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+load();
+</script>
+</body>
+</html>
